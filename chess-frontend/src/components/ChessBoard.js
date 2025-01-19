@@ -1,22 +1,27 @@
-'use client'
 import React, { useState, useEffect } from 'react';
 
-const ChessBoard = () => {
+const ChessBoard = ({ gameId, endGame }) => {
   const [selectedBox, setSelectedBox] = useState(null);
   const [board, setBoard] = useState(Array(8).fill().map(() => Array(8).fill(null)));
   const [currentPlayer, setCurrentPlayer] = useState('white');
+  const URL = 'http://localhost:8080/api/chess';
 
   useEffect(() => {
-    fetchBoardState();
-  }, []);
+    if (gameId) {
+      fetchBoardState();
+    }
+  }, [gameId]); // Now depends on gameId
 
   const fetchBoardState = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/chess/board');
+      const response = await fetch(`${URL}/game/${gameId}/board`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch board state');
+      }
       const data = await response.json();
       updateBoardFromState(data);
     } catch (error) {
-      alert("Failed to fetch board state");
+      alert("Failed to fetch board state: " + error.message);
     }
   };
   
@@ -50,13 +55,18 @@ const ChessBoard = () => {
   };
 
   const handleBoxClick = async (row, col) => {
+    if (!gameId) {
+      alert("No active game!");
+      return;
+    }
+
     if (!selectedBox) {
       if (board[row][col]?.color === currentPlayer) {
         setSelectedBox({ row, col });
       }
     } else {
       try {
-        const response = await fetch('http://localhost:8080/api/chess/move', {
+        const response = await fetch(`${URL}/game/${gameId}/move`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -69,6 +79,10 @@ const ChessBoard = () => {
           })
         });
 
+        if (!response.ok) {
+          throw new Error('Invalid move or server error');
+        }
+
         const result = await response.json();
         
         if (result.success) {
@@ -77,13 +91,13 @@ const ChessBoard = () => {
           
           if (result.message === "Game Over") {
             alert(`Game Over! ${currentPlayer.toUpperCase()} wins!`);
-            
+            endGame && endGame(gameId);
           }
         } else {
-          alert("Invalid move!");
+          alert(result.message || "Invalid move!");
         }
       } catch (error) {
-        alert("Failed to make move");
+        alert("Failed to make move: " + error.message);
       }
       setSelectedBox(null);
     }
