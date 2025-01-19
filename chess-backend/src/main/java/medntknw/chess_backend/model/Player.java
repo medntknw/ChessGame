@@ -10,6 +10,9 @@ public class Player extends Person {
         this.whiteSide = false;
     }
 
+    public String getUsername(){
+        return this.username;
+    }
     public boolean isWhiteSide() {
         return whiteSide;
     }

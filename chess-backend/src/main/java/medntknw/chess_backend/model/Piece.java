@@ -15,6 +15,9 @@ public abstract class Piece {
         return this.white;
     }
 
+    public void setHasMoved(){
+        this.hasMoved = true;
+    }
     public abstract boolean canMove(Box start, Box end);
 
     protected boolean isDiagonalMove(Box start, Box end) {

@@ -5,18 +5,20 @@ import medntknw.chess_backend.model.*;
 import medntknw.chess_backend.model.pieces.King;
 
 public class ChessGame {
+    private String gameId;
     private List<Player> players;
     private Board board;
     private int currPlayerIndex;
     private GameStatus gameStatus;
     private List<Move> movesPlayed;
 
-    public ChessGame(){
+    public ChessGame(String gameId){
         this.players = new ArrayList<>();
         this.board = new Board();
         this.currPlayerIndex = 0;
         this.gameStatus = GameStatus.ACTIVE;
         this.movesPlayed = new ArrayList<>();
+        this.gameId = gameId;
     }
 
     public Board getBoard(){
@@ -40,7 +42,7 @@ public class ChessGame {
         return players.get(currPlayerIndex);
     }
 
-    public void getOtherPlayer(){
+    public void setOtherPlayer(){
         this.currPlayerIndex ^= 1;
     }
     public void setGameStatus(GameStatus gameStatus){
@@ -78,6 +80,7 @@ public class ChessGame {
     public void executeMove(Move move){
         board.updateBox(move.getEnd().getX(), move.getEnd().getY(), move.getPieceMoved());
         board.updateBox(move.getStart().getX(), move.getStart().getY(), null);
+        move.getPieceMoved().setHasMoved();
     }
 
 }

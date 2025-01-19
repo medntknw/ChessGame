@@ -1,5 +1,4 @@
 package medntknw.chess_backend.controller;
-
 import medntknw.chess_backend.game.ChessGame;
 import medntknw.chess_backend.model.*;
 import medntknw.chess_backend.dto.*;
@@ -11,26 +10,45 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/chess")
 @CrossOrigin(origins = "http://localhost:3000")
 public class ChessController {
-    private final ChessGame game;
+    private final GameService gameService;
 
-    public ChessController() {
-        this.game = new ChessGame();
-        // Initialize with default players
-        Player p1 = new Player("player1", "Player 1", "p1@example.com");
-        Player p2 = new Player("player2", "Player 2", "p2@example.com");
-        p1.setWhiteSide(true);
-        game.addPlayer(p1);
-        game.addPlayer(p2);
-        game.resetBoard();
+    public ChessController(GameService gameService) {
+        this.gameService = gameService;
     }
 
-    @GetMapping("/board")
-    public ResponseEntity<BoardState> getBoardState() {
+    @PostMapping("/game")
+    public ResponseEntity<BoardState> createGame(@RequestBody CreateGameRequest createGameRequest) {
+        ChessGame game = gameService.createGame(
+                createGameRequest.gameId,
+                createGameRequest.player1,
+                createGameRequest.player2
+        );
         return ResponseEntity.ok(new BoardState(game.getBoard()));
     }
 
-    @PostMapping("/move")
-    public ResponseEntity<MoveResult> makeMove(@RequestBody MoveRequest moveRequest) {
+    @GetMapping("/game/{gameId}/board")
+    public ResponseEntity<BoardState> getBoardState(@PathVariable String gameId) {
+        ChessGame game = gameService.getGame(gameId);
+        if (game == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(new BoardState(game.getBoard()));
+    }
+
+    @PostMapping("/game/{gameId}/move")
+    public ResponseEntity<MoveResult> makeMove(
+            @PathVariable String gameId,
+            @RequestBody MoveRequest moveRequest) {
+        ChessGame game = gameService.getGame(gameId);
+        if (game == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (game.getGameStatus() != GameStatus.ACTIVE) {
+            return ResponseEntity.badRequest()
+                    .body(new MoveResult(false, "Game is inactive!"));
+        }
+
         Move move = game.makeMove(
                 game.getActivePlayer(),
                 moveRequest.startX,
@@ -40,12 +58,13 @@ public class ChessController {
         );
 
         if (!game.isValidMove(move)) {
-            return ResponseEntity.badRequest().body(new MoveResult(false, "Invalid move"));
+            return ResponseEntity.badRequest()
+                    .body(new MoveResult(false, "Invalid move"));
         }
 
         game.executeMove(move);
         boolean gameOver = game.isOver(move);
-        game.getOtherPlayer();
+        game.setOtherPlayer();
 
         return ResponseEntity.ok(new MoveResult(
                 true,
